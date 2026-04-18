@@ -80,11 +80,13 @@ http://localhost:5000
 
 ### Initial Interface
 The clean, modern interface ready for thermal image analysis:
-![Initial Interface](screenshots/interface_initial.png)
+<img width="1920" height="1920" alt="image" src="https://github.com/user-attachments/assets/b2705df5-9109-4c49-86fc-9210910de8ce" />
+
 
 ### Analysis Results
 Real-time AI analysis showing fault detection with confidence score:
-![Analysis Results](screenshots/analysis_results.png)
+<img width="1920" height="2741" alt="image" src="https://github.com/user-attachments/assets/8d0ed548-ca25-4e0a-9495-c9e0b5e7e61d" />
+
 
 ## Model Information
 
