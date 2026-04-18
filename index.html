@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thermal Vision AI — Smart Fault Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-void: #060a0f;
+      --bg-deep: #0a1018;
+      --bg-panel: #0d1520;
+      --bg-card: #111d2b;
+      --bg-card-hover: #152233;
+      --border: rgba(255,165,50,0.12);
+      --border-bright: rgba(255,165,50,0.35);
+      --border-cool: rgba(56,200,220,0.18);
+      --text-primary: #e8f0f8;
+      --text-secondary: #8fa8c8;
+      --text-dim: #4a6480;
+      --accent-fire: #ff7a18;
+      --accent-fire-dim: rgba(255,122,24,0.15);
+      --accent-amber: #ffb830;
+      --accent-cyan: #38c8dc;
+      --accent-cyan-dim: rgba(56,200,220,0.12);
+      --ok: #22d48a;
+      --ok-dim: rgba(34,212,138,0.12);
+      --danger: #f04444;
+      --danger-dim: rgba(240,68,68,0.12);
+      --heat-1: #ff3d00;
+      --heat-2: #ff7a18;
+      --heat-3: #ffb830;
+      --heat-4: #fff176;
+      --cool-1: #0d4fa8;
+      --cool-2: #1b82c8;
+      --cool-3: #38c8dc;
+      --font-mono: 'Share Tech Mono', monospace;
+      --font-display: 'Rajdhani', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg-void);
+      font-family: var(--font-body);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Atmospheric background ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 600px 400px at 10% 0%, rgba(255,80,0,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 500px 300px at 90% 80%, rgba(20,90,180,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 800px 600px at 50% 50%, rgba(10,20,40,0.6) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Subtle scanline texture */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* All content above overlays */
+    header, main, footer { position: relative; z-index: 2; }
+
+    /* ── Typography ── */
+    h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: 0.03em; }
+
+    .mono { font-family: var(--font-mono); }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      background: rgba(6,10,15,0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--heat-1), var(--heat-2), var(--heat-3));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 0 16px rgba(255,100,0,0.4);
+    }
+
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      background: linear-gradient(90deg, var(--accent-fire), var(--accent-amber));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(34,212,138,0.25);
+      background: rgba(34,212,138,0.06);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--ok);
+      letter-spacing: 0.04em;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 8px var(--ok);
+      animation: blink 2.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .header-meta {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Main layout ── */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Hero section ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 56px;
+      animation: slideDown 0.7s ease-out both;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-fire);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid var(--border-bright);
+      border-radius: 4px;
+      padding: 5px 14px;
+      margin-bottom: 20px;
+      background: var(--accent-fire-dim);
+    }
+
+    .hero h2 {
+      font-size: clamp(36px, 5vw, 60px);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+      margin-bottom: 16px;
+      background: linear-gradient(160deg, #fff 30%, rgba(255,165,80,0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto 28px;
+      line-height: 1.7;
+    }
+
+    .hero-chips {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 14px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      letter-spacing: 0.03em;
+    }
+
+    .chip i { font-size: 11px; }
+    .chip .ok { color: var(--ok); }
+    .chip .fire { color: var(--accent-fire); }
+    .chip .cyan { color: var(--accent-cyan); }
+
+    /* ── Cards & panels ── */
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .panel:hover {
+      border-color: var(--border-bright);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .section-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .icon-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+    .icon-amber { background: rgba(255,184,48,0.12); color: var(--accent-amber); }
+    .icon-cyan { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+
+    .section-label h3 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Grid layout ── */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Upload panel ── */
+    .upload-panel { padding: 28px; }
+
+    .drop-zone {
+      border: 1.5px dashed rgba(148,163,184,0.2);
+      border-radius: 10px;
+      padding: 52px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-align: center;
+      background: rgba(6,10,15,0.5);
+      transition: all 0.35s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Corner accents on drop zone */
+    .drop-zone::before, .drop-zone::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-color: var(--accent-fire);
+      border-style: solid;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .drop-zone::before {
+      top: 8px; left: 8px;
+      border-width: 2px 0 0 2px;
+      border-radius: 2px 0 0 0;
+    }
+
+    .drop-zone::after {
+      bottom: 8px; right: 8px;
+      border-width: 0 2px 2px 0;
+      border-radius: 0 0 2px 0;
+    }
+
+    .drop-zone:hover::before, .drop-zone:hover::after,
+    .drop-zone.dragover::before, .drop-zone.dragover::after {
+      opacity: 1;
+    }
+
+    .drop-zone:hover {
+      border-color: rgba(96,165,250,0.4);
+      background: rgba(30,58,138,0.12);
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--accent-fire);
+      background: linear-gradient(135deg, rgba(255,122,24,0.1), rgba(56,200,220,0.08));
+      transform: scale(0.99);
+    }
+
+    .upload-icon {
+      font-size: 48px;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      animation: floatIcon 3s ease-in-out infinite;
+    }
+
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .drop-zone p.big { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+    .drop-zone p.small { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+    .drop-zone p.hint { font-size: 11px; color: var(--text-dim); font-family: var(--font-mono); margin-top: 12px; letter-spacing: 0.04em; }
+
+    .btn-browse {
+      padding: 10px 24px;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      border: none;
+      border-radius: 7px;
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-browse:hover {
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+    }
+
+    /* ── Preview section ── */
+    #previewContainer { margin-top: 24px; }
+
+    .preview-label {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    #previewImage {
+      width: 100%;
+      max-height: 380px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(6,10,15,0.8);
+    }
+
+    .btn-analyze {
+      margin-top: 16px;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #c2440a, var(--accent-fire), #e08000);
+      background-size: 200% 100%;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      box-shadow: 0 4px 24px rgba(255,100,0,0.25);
+    }
+
+    .btn-analyze:hover {
+      background-position: 100% 0;
+      box-shadow: 0 6px 32px rgba(255,100,0,0.45);
+      transform: translateY(-2px);
+    }
+
+    .btn-analyze:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Right sidebar ── */
+    .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+    .sys-card { padding: 20px; }
+
+    .sys-header {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sys-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 13px;
+    }
+
+    .sys-row:last-child { border-bottom: none; }
+    .sys-row .label { color: var(--text-secondary); display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .sys-row .value { color: var(--text-primary); font-weight: 600; font-family: var(--font-mono); font-size: 12px; }
+
+    .fault-classes {
+      padding: 20px;
+    }
+
+    .fault-classes h4 {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .fault-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .fault-tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: rgba(255,255,255,0.02);
+      letter-spacing: 0.03em;
+    }
+
+    .fault-tag.highlight {
+      border-color: rgba(255,122,24,0.3);
+      color: var(--accent-amber);
+      background: rgba(255,122,24,0.06);
+    }
+
+    /* ── Default state ── */
+    #defaultState {
+      padding: 60px 32px;
+      text-align: center;
+      margin-bottom: 0;
+    }
+
+    #defaultState i { font-size: 48px; color: var(--text-dim); margin-bottom: 16px; display: block; }
+    #defaultState p.big { font-size: 16px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500; }
+    #defaultState p.small { font-size: 13px; color: var(--text-dim); }
+
+    /* ── Result section ── */
+    #resultSection {
+      animation: fadeInUp 0.55s ease-out both;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-panel { padding: 28px; }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .result-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Prediction card */
+    .pred-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pred-card .micro-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    #predictedClass {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--text-primary);
+      letter-spacing: 0.04em;
+      min-height: 40px;
+    }
+
+    /* Confidence gauge card */
+    .gauge-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .gauge-card .micro-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .gauge-ring {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent-cyan) 0deg, rgba(30,40,60,0.8) 0deg 360deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: background 0.1s;
+    }
+
+    .gauge-inner {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    #confidenceValue {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+
+    .gauge-sublabel {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    /* Timeline / history mini card */
+    .meta-card {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .meta-card .micro-label {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .meta-row:last-child { border-bottom: none; }
+    .meta-row .k { color: var(--text-secondary); font-family: var(--font-mono); }
+    .meta-row .v { color: var(--text-primary); font-weight: 600; font-family: var(--font-mono); }
+
+    /* Status badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .badge-ok {
+      background: var(--ok-dim);
+      color: var(--ok);
+      border: 1px solid rgba(34,212,138,0.3);
+    }
+
+    .badge-alert {
+      background: var(--danger-dim);
+      color: var(--danger);
+      border: 1px solid rgba(240,68,68,0.3);
+    }
+
+    /* Alert/recommendation box */
+    #alertBox {
+      border-radius: 8px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.65;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      transition: all 0.3s ease;
+    }
+
+    #alertBox i { font-size: 20px; margin-top: 2px; flex-shrink: 0; }
+    #alertBox .alert-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; font-family: var(--font-display); letter-spacing: 0.03em; }
+
+    .alert-ok {
+      background: var(--ok-dim);
+      border-left: 3px solid var(--ok);
+      color: #a0f0d0;
+    }
+
+    .alert-danger {
+      background: var(--danger-dim);
+      border-left: 3px solid var(--danger);
+      color: #ffb0b0;
+    }
+
+    /* Info cards row */
+    .info-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 640px) { .info-row { grid-template-columns: 1fr; } }
+
+    .info-block {
+      background: rgba(56,200,220,0.04);
+      border: 1px solid var(--border-cool);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .info-block i { color: var(--accent-cyan); font-size: 16px; margin-top: 2px; }
+    .info-block .ib-label { font-size: 10px; font-family: var(--font-mono); color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+    .info-block .ib-value { font-size: 13px; color: var(--text-primary); font-weight: 500; }
+
+    /* Action buttons */
+    .action-row {
+      display: flex;
+      gap: 12px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 640px) { .action-row { flex-direction: column; } }
+
+    .btn-ghost {
+      flex: 1;
+      padding: 11px 20px;
+      background: transparent;
+      border: 1px solid rgba(148,163,184,0.2);
+      border-radius: 7px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(148,163,184,0.4);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 11px 20px;
+      background: rgba(30,58,100,0.5);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 7px;
+      color: #93c5fd;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(37,99,235,0.3);
+      border-color: rgba(59,130,246,0.4);
+      color: #bfdbfe;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Thermal color bar (decorative) ── */
+    .heat-bar {
+      height: 3px;
+      background: linear-gradient(90deg, var(--cool-1), var(--cool-3), var(--heat-3), var(--heat-2), var(--heat-1));
+      border-radius: 2px;
+      margin-bottom: 24px;
+      opacity: 0.6;
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      background: rgba(6,10,15,0.6);
+      padding: 24px;
+    }
+
+    .footer-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .footer-inner p {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+    }
+
+    .footer-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+    .footer-tag {
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 2px 8px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Utility ── */
+    .hidden { display: none !important; }
+
+    /* Staggered reveal */
+    .reveal { opacity: 0; animation: fadeInUp 0.5s ease-out forwards; }
+    .reveal:nth-child(1) { animation-delay: 0.05s; }
+    .reveal:nth-child(2) { animation-delay: 0.12s; }
+    .reveal:nth-child(3) { animation-delay: 0.19s; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">🔥</div>
+        <span class="logo-text">THERMAL VISION AI</span>
+      </div>
+      <div class="header-right">
+        <span class="header-meta hidden md-show" style="display:none;">v1.0 · ResNet18</span>
+        <div class="status-pill">
+          <div class="status-dot"></div>
+          SYSTEM ONLINE
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ── Hero ── -->
+    <div class="hero">
+      <div class="hero-tag">
+        <i class="fas fa-fire" style="font-size:10px;"></i>
+        AI-POWERED THERMAL FAULT DETECTION
+      </div>
+      <h2>Early Overheating<br>Detection System</h2>
+      <p>Advanced thermal imaging analysis for predictive maintenance across manufacturing, maritime, and aviation industries.</p>
+      <div class="hero-chips">
+        <div class="chip"><i class="fas fa-check-circle ok"></i> Real-time Analysis</div>
+        <div class="chip"><i class="fas fa-brain fire"></i> ResNet18 Model</div>
+        <div class="chip"><i class="fas fa-shield-halved cyan"></i> 11 Fault Classes</div>
+        <div class="chip"><i class="fas fa-bolt fire"></i> Transfer Learning</div>
+      </div>
+    </div>
+
+    <!-- ── Thermal color scale bar ── -->
+    <div class="heat-bar"></div>
+
+    <!-- ── Main Grid ── -->
+    <div class="main-grid">
+
+      <!-- Upload column -->
+      <div class="panel upload-panel">
+        <div class="section-label">
+          <div class="section-icon icon-blue"><i class="fas fa-upload"></i></div>
+          <h3>Upload Thermal Image</h3>
+        </div>
+
+        <div id="dropZone" class="drop-zone" onclick="document.getElementById('fileInput').click()">
+          <i class="fas fa-thermometer-three-quarters upload-icon"></i>
+          <p class="big">Drop thermal image here</p>
+          <p class="small">or click to browse your device</p>
+          <button class="btn-browse" onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
+            <i class="fas fa-folder-open"></i> Browse Files
+          </button>
+          <p class="hint">JPG · PNG · WebP · Max 50MB</p>
+          <input type="file" id="fileInput" accept="image/*" class="hidden">
+        </div>
+
+        <!-- Preview -->
+        <div id="previewContainer" class="hidden">
+          <div class="preview-label"><i class="fas fa-image" style="color:var(--text-dim);"></i> Image Preview</div>
+          <img id="previewImage" alt="Thermal image preview">
+          <button onclick="analyzeImage()" class="btn-analyze" id="analyzeBtn">
+            <i class="fas fa-wand-magic-sparkles"></i>
+            ANALYZE WITH AI
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar column -->
+      <div class="sidebar">
+
+        <!-- System Status -->
+        <div class="panel sys-card">
+          <div class="sys-header"><i class="fas fa-server"></i> SYSTEM STATUS</div>
+          <div class="sys-row">
+            <span class="label"><i class="fas fa-circle" style="color:var(--ok);font-size:8px;"></i> Status</span>
+            <span class="value" style="color:var(--ok);">ONLINE</span>
+          </div>
+          <div class="sys-row">
+            <span class="label"><i class="fas fa-brain" style="width:12px;"></i> Model</span>
+            <span class="value">ResNet18</span>
+          </div>
+          <div class="sys-row">
+            <span class="label"><i class="fas fa-tag" style="width:12px;"></i> Classes</span>
+            <span class="value">11 FAULTS</span>
+          </div>
+          <div class="sys-row">
+            <span class="label"><i class="fas fa-microchip" style="width:12px;"></i> Backend</span>
+            <span class="value">Flask + PyTorch</span>
+          </div>
+          <div class="sys-row">
+            <span class="label"><i class="fas fa-crosshairs" style="width:12px;"></i> Accuracy</span>
+            <span class="value" style="color:var(--accent-amber);">HIGH</span>
+          </div>
+        </div>
+
+        <!-- Fault Classes -->
+        <div class="panel fault-classes">
+          <h4><i class="fas fa-list-check" style="margin-right:6px;"></i> DETECTABLE FAULTS</h4>
+          <div class="fault-tags">
+            <span class="fault-tag highlight">NoLoad</span>
+            <span class="fault-tag">BearingFault</span>
+            <span class="fault-tag">Overload</span>
+            <span class="fault-tag">Rotor</span>
+            <span class="fault-tag">Stator</span>
+            <span class="fault-tag">Insulation</span>
+            <span class="fault-tag">Cooling</span>
+            <span class="fault-tag">Vibration</span>
+            <span class="fault-tag">Winding</span>
+            <span class="fault-tag">Shaft</span>
+            <span class="fault-tag">Demagnetization</span>
+          </div>
+        </div>
+
+        <!-- Quick Guide -->
+        <div class="panel sys-card">
+          <div class="sys-header"><i class="fas fa-info-circle"></i> QUICK GUIDE</div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:24px;height:24px;border-radius:50%;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--font-mono);color:#60a5fa;flex-shrink:0;">1</div>
+              <span style="font-size:12px;color:var(--text-secondary);">Upload a thermal image of the motor</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:24px;height:24px;border-radius:50%;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--font-mono);color:#60a5fa;flex-shrink:0;">2</div>
+              <span style="font-size:12px;color:var(--text-secondary);">Click <strong style="color:var(--accent-fire);">Analyze with AI</strong> button</span>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:24px;height:24px;border-radius:50%;background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);display:flex;align-items:center;justify-content:center;font-size:11px;font-family:var(--font-mono);color:#60a5fa;flex-shrink:0;">3</div>
+              <span style="font-size:12px;color:var(--text-secondary);">View fault prediction &amp; recommendations</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Results section ── -->
+    <div id="resultSection" class="hidden panel result-panel">
+      <div class="section-label" style="margin-bottom:24px;">
+        <div class="section-icon icon-amber"><i class="fas fa-chart-line"></i></div>
+        <h3>AI Analysis Results</h3>
+      </div>
+
+      <div class="result-grid">
+        <!-- Prediction -->
+        <div class="card pred-card reveal">
+          <div class="micro-label">Predicted Fault</div>
+          <div id="predictedClass">—</div>
+          <span id="statusBadge" class="badge"></span>
+        </div>
+
+        <!-- Confidence gauge -->
+        <div class="card gauge-card reveal">
+          <div class="micro-label">Confidence Level</div>
+          <div class="gauge-ring" id="confidenceCircle">
+            <div class="gauge-inner">
+              <span id="confidenceValue">0%</span>
+              <span class="gauge-sublabel">certainty</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="card meta-card reveal">
+          <div class="micro-label">Analysis Metadata</div>
+          <div class="meta-row"><span class="k">MODEL</span><span class="v">ResNet18</span></div>
+          <div class="meta-row"><span class="k">TYPE</span><span class="v">Transfer Learning</span></div>
+          <div class="meta-row"><span class="k">CLASSES</span><span class="v">11 FAULTS</span></div>
+          <div class="meta-row"><span class="k">VERSION</span><span class="v">v1.0</span></div>
+          <div class="meta-row"><span class="k">TIMESTAMP</span><span class="v" id="analysisTime">—</span></div>
+        </div>
+      </div>
+
+      <!-- Recommendation alert -->
+      <div id="alertBox"></div>
+
+      <!-- Info blocks -->
+      <div class="info-row">
+        <div id="infoCard1" class="info-block"></div>
+        <div id="infoCard2" class="info-block"></div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="action-row">
+        <button onclick="resetUI()" class="btn-ghost">
+          <i class="fas fa-arrow-left"></i> Analyze Another
+        </button>
+        <button onclick="downloadResults()" class="btn-secondary">
+          <i class="fas fa-download"></i> Download Report
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Default state ── -->
+    <div id="defaultState" class="panel">
+      <i class="fas fa-fire-flame-curved" style="font-size:44px;color:rgba(255,122,24,0.2);margin-bottom:14px;display:block;text-align:center;margin-top:48px;"></i>
+      <p class="big" style="text-align:center;font-size:16px;color:var(--text-secondary);margin-bottom:6px;">Ready to analyze thermal images</p>
+      <p class="small" style="text-align:center;font-size:13px;color:var(--text-dim);padding-bottom:48px;">Upload a thermal image above to begin AI-powered fault detection</p>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-inner">
+      <p>🔥 SMART THERMAL VISION SYSTEM · ResNet18 Transfer Learning · v1.0</p>
+      <div class="footer-tags">
+        <span class="footer-tag">MANUFACTURING</span>
+        <span class="footer-tag">MARITIME</span>
+        <span class="footer-tag">AVIATION</span>
+        <span class="footer-tag">PREDICTIVE MAINTENANCE</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    let currentImageFile = null;
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const previewContainer = document.getElementById('previewContainer');
+    const previewImage = document.getElementById('previewImage');
+    const resultSection = document.getElementById('resultSection');
+    const defaultState = document.getElementById('defaultState');
+
+    // Drag & Drop
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleFile(file);
+    });
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    function handleFile(file) {
+      currentImageFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        previewImage.src = e.target.result;
+        previewContainer.classList.remove('hidden');
+        defaultState.classList.add('hidden');
+        resultSection.classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function analyzeImage() {
+      if (!currentImageFile) return;
+
+      const btn = document.getElementById('analyzeBtn');
+      btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:10px;"><span class="spinner"></span>ANALYZING IMAGE...</span>`;
+      btn.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append('file', currentImageFile);
+
+        const response = await fetch('/predict', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Prediction failed');
+        }
+
+        const result = await response.json();
+        displayResults(result);
+        resultSection.classList.remove('hidden');
+        setTimeout(() => resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+      } catch (error) {
+        alert('❌ Error: ' + error.message);
+        console.error('Prediction error:', error);
+      } finally {
+        btn.innerHTML = `<i class="fas fa-wand-magic-sparkles"></i> ANALYZE WITH AI`;
+        btn.disabled = false;
+      }
+    }
+
+    function displayResults(result) {
+      const confidence = result.confidence;
+      const predicted = result.predicted_class;
+      const isNormal = predicted.toLowerCase() === 'noload';
+
+      // Predicted class
+      document.getElementById('predictedClass').textContent = predicted;
+
+      // Timestamp
+      document.getElementById('analysisTime').textContent =
+        new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      // Animate gauge
+      animateGauge(confidence);
+      document.getElementById('confidenceValue').textContent = confidence + '%';
+
+      // Badge
+      const badge = document.getElementById('statusBadge');
+      if (isNormal) {
+        badge.className = 'badge badge-ok';
+        badge.innerHTML = '<i class="fas fa-check-circle"></i> NORMAL';
+      } else {
+        badge.className = 'badge badge-alert';
+        badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> FAULT DETECTED';
+      }
+
+      // Alert box
+      const alertBox = document.getElementById('alertBox');
+      if (isNormal) {
+        alertBox.className = 'alert-ok';
+        alertBox.style.cssText = 'border-radius:8px;padding:18px 22px;margin-bottom:20px;font-size:14px;line-height:1.65;display:flex;gap:14px;align-items:flex-start;background:rgba(34,212,138,0.08);border-left:3px solid #22d48a;color:#a0f0d0;';
+        alertBox.innerHTML = `
+          <i class="fas fa-shield-halved" style="font-size:20px;margin-top:2px;flex-shrink:0;"></i>
+          <div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px;font-family:'Rajdhani',sans-serif;letter-spacing:0.04em;">✅ Normal Operation</div>
+            <div>${result.recommendation}</div>
+          </div>`;
+      } else {
+        alertBox.style.cssText = 'border-radius:8px;padding:18px 22px;margin-bottom:20px;font-size:14px;line-height:1.65;display:flex;gap:14px;align-items:flex-start;background:rgba(240,68,68,0.08);border-left:3px solid #f04444;color:#ffb0b0;';
+        alertBox.innerHTML = `
+          <i class="fas fa-exclamation-triangle" style="font-size:20px;margin-top:2px;flex-shrink:0;"></i>
+          <div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:6px;font-family:'Rajdhani',sans-serif;letter-spacing:0.04em;">⚠️ Fault Detected</div>
+            <div>${result.recommendation}</div>
+          </div>`;
+      }
+
+      // Info cards
+      document.getElementById('infoCard1').innerHTML = `
+        <i class="fas fa-brain"></i>
+        <div>
+          <div class="ib-label">Model Architecture</div>
+          <div class="ib-value">ResNet18 — Transfer Learning</div>
+        </div>`;
+
+      document.getElementById('infoCard2').innerHTML = `
+        <i class="fas fa-gauge-high"></i>
+        <div>
+          <div class="ib-label">Confidence Score</div>
+          <div class="ib-value">${confidence}% certainty in prediction</div>
+        </div>`;
+    }
+
+    function animateGauge(target) {
+      const circle = document.getElementById('confidenceCircle');
+      const step = Math.max(1, target / 25);
+      let current = 0;
+      const iv = setInterval(() => {
+        if (current >= target) { clearInterval(iv); current = target; }
+        const angle = (current / 100) * 360;
+        circle.style.background = `conic-gradient(var(--accent-cyan) ${angle}deg, rgba(20,30,50,0.9) ${angle}deg 360deg)`;
+        current += step;
+      }, 28);
+    }
+
+    function resetUI() {
+      previewContainer.classList.add('hidden');
+      resultSection.classList.add('hidden');
+      defaultState.classList.remove('hidden');
+      currentImageFile = null;
+      fileInput.value = '';
+      document.getElementById('confidenceCircle').style.background =
+        'conic-gradient(var(--accent-cyan) 0deg, rgba(20,30,50,0.9) 0deg 360deg)';
+    }
+
+    function downloadResults() {
+      const predicted = document.getElementById('predictedClass').textContent;
+      const confidence = document.getElementById('confidenceValue').textContent;
+      const recommendation = document.getElementById('alertBox').innerText;
+      const timestamp = new Date().toLocaleString();
+      const report = `THERMAL VISION ANALYSIS REPORT
+=====================================
+Generated: ${timestamp}
+
+PREDICTION RESULTS:
+- Fault Type: ${predicted}
+- Confidence: ${confidence}
+
+FINDINGS:
+${recommendation}
+
+SYSTEM INFO:
+- Model: ResNet18 (Transfer Learning)
+- Fault Classes: 11
+- System: Smart Thermal Vision v1.0
+
+=====================================`.trim();
+
+      const a = document.createElement('a');
+      a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(report);
+      a.download = `thermal-analysis-${Date.now()}.txt`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  </script>
+</body>
+</html>
