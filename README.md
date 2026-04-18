@@ -85,7 +85,7 @@ The clean, modern interface ready for thermal image analysis:
 
 ### Analysis Results
 Real-time AI analysis showing fault detection with confidence score:
-<img width="1920" height="2741" alt="image" src="https://github.com/user-attachments/assets/2cd9222e-7047-4512-aea6-268b8b50b339" />
+<img width="1920" height="3500" alt="image" src="https://github.com/user-attachments/assets/2cd9222e-7047-4512-aea6-268b8b50b339" />
 
 
 ## Model Information
