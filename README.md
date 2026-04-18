@@ -72,8 +72,19 @@ http://localhost:5000
 ├── best_thermal_motor_model.pth # Pre-trained ResNet18 model
 ├── Smart_Thermal_Vision_System_for_Predictive_Machine_Maintenance.ipynb
 ├── thermal_dataset/            # Training dataset (not included)
+├── screenshots/                # Demo screenshots
 └── README.md                   # This file
 ```
+
+## Screenshots
+
+### Initial Interface
+The clean, modern interface ready for thermal image analysis:
+![Initial Interface](screenshots/interface_initial.png)
+
+### Analysis Results
+Real-time AI analysis showing fault detection with confidence score:
+![Analysis Results](screenshots/analysis_results.png)
 
 ## Model Information
 
